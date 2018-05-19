@@ -24,13 +24,13 @@ public class HostPart {
     private static final Logger logger = LogManager.getLogger();
     
     // размер коммуникатора
-    private static final int maxGlobalWorkSize =10;
+    private static final int maxGlobalWorkSize =2;
     private static final int xpoints = 1000;
     private static int save_freq =1; // частота сохранения результата
     private static int tpoints = 40000;
     private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static double tmax=200;
+    private static double tmax=300;
     private static double Rright=1.0;
     private static double whole_lenght=2;
     private static double dx = whole_lenght / (xpoints-1);
