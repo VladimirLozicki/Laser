@@ -24,18 +24,18 @@ public class HostPart {
     private static final Logger logger = LogManager.getLogger();
     
     // размер коммуникатора
-    private static final int maxGlobalWorkSize =1;
-    private static final int xpoints = 100;
-    private static double save_freq =1; // частота сохранения результата   
-    private static int tpoints = 1000;
-    private static double dt = 0.01;
+    private static final int maxGlobalWorkSize =10;
+    private static final int xpoints = 1000;
+    private static int save_freq =1; // частота сохранения результата
+    private static int tpoints = 40000;
+    private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static double tmax=1.0;
+    private static double tmax=200;
     private static double Rright=1.0;
-    private static double whole_lenght=1.0;
-    private static double dx = whole_lenght / (xpoints - 1);
+    private static double whole_lenght=2;
+    private static double dx = whole_lenght / (xpoints-1);
     // число точек на процесс
-    private static double local_n = xpoints/maxGlobalWorkSize;
+    private static int local_n = xpoints/maxGlobalWorkSize;
     
 
     private static cl_program program;
@@ -72,7 +72,7 @@ public class HostPart {
           U_minus[i]=(Math.random()*1e-6);
         });
        
-        try (final FileWriter writer = new FileWriter("C:\\Users\\WORK\\Desktop\\LaserDynamicsModelling\\src\\main\\resources\\temporary.txt", false))
+        try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/temporary.csv", false))
         {
             for (int i = 0; i < U_plus.length; i++)
             {
@@ -133,7 +133,7 @@ public class HostPart {
       // clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, xpoints * Sizeof.cl_double, right, 0, null, null);
        // clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, xpoints * Sizeof.cl_double, left, 0, null, null);
            // запись в файл правой волны
-         try (final FileWriter writer = new FileWriter("C:\\Users\\WORK\\Desktop\\LaserDynamicsModelling\\src\\main\\resources\\Uplus.txt", false))
+         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
         {
              for (int i =0; i < U_plus.length; i++)
             {
@@ -147,7 +147,7 @@ public class HostPart {
             System.out.println(e.getMessage());
          }
       
-           try (final FileWriter writer = new FileWriter("C:\\Users\\WORK\\Desktop\\LaserDynamicsModelling\\src\\main\\resources\\Uminus.txt", false))
+           try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_minus.csv", false))
         {
             for (int i = 0; i < U_minus.length; i++)
             {
@@ -180,7 +180,7 @@ public class HostPart {
          
         //output the results to the console
         
-       // IntStream.range(0, U_plus.length).mapToDouble(i -> U_plus[i]).forEach(System.out::println);
+         //IntStream.range(0, U_plus.length).mapToDouble(i -> U_plus[i]).forEach(System.out::println);
         //IntStream.range(0, u_minus.length).mapToDouble(i -> u_minus[i]).forEach(System.out::println);
        
       
@@ -249,18 +249,16 @@ public class HostPart {
       
         String programSource;
        programSource = 
-               readFile("C:\\Users\\WORK\\Desktop\\LaserDynamicsModelling\\src\\main\\java\\kernels\\LaserDynamics.cl")
+               readFile("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/java/kernels/LaserDynamics.cl")
                        .replace("{{xpoints}}", String.format("%d",xpoints) )
-                       .replace("{{save_freq}}", String.format("%f", save_freq) )
-                       .replace("{{tpoints}}", String.format("%d",tpoints) )
+                       .replace("{{save_freq}}", String.format("%d", save_freq) )
                        .replace("{{maxGlobalWorkSize}}", String.format("%d", maxGlobalWorkSize) )
                        .replace("{{Rleft}}", String.format("%f",Rleft) )
                        .replace("{{Rright}}", String.format("%f",Rright) )
                        .replace("{{dt}}", String.format("%f",dt) )
                        .replace("{{dx}}", String.format("%f",dx) )
-                       .replace("{{local_n}}", String.format("%f",local_n) )
+                       .replace("{{local_n}}", String.format("%d",local_n) )
                ;
-       // programSource = readFile("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/java/kernels/LaserDynamics.cl").replace("{{N}} {{maxGlobalWorkSize}}", String.format("%d %d",N, maxGlobalWorkSize) );
             
            // equals 
            // метод equals сравнение строк
