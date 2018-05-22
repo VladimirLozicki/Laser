@@ -30,10 +30,12 @@ public class HostPart {
     private static int tpoints = 40000;
     private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static double tmax=300;
-    private static double Rright=1.0;
+    private static double tmax=3700;
+    private static double Rright=1;
     private static double whole_lenght=2;
     private static double dx = whole_lenght / (xpoints-1);
+   // private static double dx = dt;
+    //private static double dx = 0.001;
     // число точек на процесс
     private static int local_n = xpoints/maxGlobalWorkSize;
     
@@ -44,6 +46,7 @@ public class HostPart {
     private static cl_command_queue commandQueue;
     private static cl_mem memObjects[] = new cl_mem[2];
 
+    
     /**
      * Main part of the Host Part.
      *
@@ -52,8 +55,6 @@ public class HostPart {
 
     public static void main(String args[]) {
         // Create input- and output data
-        //double temporaryRight[] = new double[xpoints];
-      //  double temporaryLeft[] = new double[xpoints];
         double[] U_plus = new double[xpoints];
         //массив произедения элементов
         double[] U_minus=new double[xpoints];
@@ -67,9 +68,9 @@ public class HostPart {
 	  //double freq_Hz = 50; 
           //double S_RATE=1;
           IntStream.range(0, xpoints).forEach((i) -> {
-          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-6));
+          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-12));
           // U_plus[i]+=(int)(amplitude * Math.sin((float)(2*Math.PI*i*freq_Hz/S_RATE))+(Math.random()*1e-6));
-          U_minus[i]=(Math.random()*1e-6);
+          U_minus[i]=(Math.random()*1e-12);
         });
        
         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/temporary.csv", false))
@@ -133,27 +134,45 @@ public class HostPart {
       // clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, xpoints * Sizeof.cl_double, right, 0, null, null);
        // clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, xpoints * Sizeof.cl_double, left, 0, null, null);
            // запись в файл правой волны
-         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
+//         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
+//        {
+//             for (int i =0; i < U_plus.length; i++)
+//            {
+//                final String s = Double.toString(U_plus[i]);
+//                writer.write(s);
+//                writer.write(System.lineSeparator());
+//                //U_plus[i]=U_plus[i]+(Math.random()*1e-12);
+//            }
+//          // System.out.println("u_plus.lenght" + u_plus.length);
+//        }
+//        catch(IOException e) {
+//            System.out.println(e.getMessage());
+//         }
+
+             try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_minus.csv", false))
         {
-             for (int i =0; i < U_plus.length; i++)
+             for (int i=U_minus.length-1; i>=0; i--)
             {
-                final String s = Double.toString(U_plus[i]);
+                final String s = Double.toString(U_minus[i]);
                 writer.write(s);
                 writer.write(System.lineSeparator());
+                //U_plus[i]=U_plus[i]+(Math.random()*1e-12);
             }
           // System.out.println("u_plus.lenght" + u_plus.length);
         }
         catch(IOException e) {
             System.out.println(e.getMessage());
          }
-      
-           try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_minus.csv", false))
+             
+             
+           try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
         {
-            for (int i = 0; i < U_minus.length; i++)
+            for (int i = 0; i < U_plus.length; i++)
             {
-                final String s = Double.toString(U_minus[i]);
+                final String s = Double.toString(U_plus[i]);
                 writer.write(s);
                 writer.write(System.lineSeparator());
+               // U_minus[i]=U_minus[i]+(Math.random()*1e-12);
             }
         }
         catch(IOException e) {
