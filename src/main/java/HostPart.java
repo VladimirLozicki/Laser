@@ -26,18 +26,17 @@ public class HostPart {
     // размер коммуникатора
     private static final int maxGlobalWorkSize =2;
     private static final int xpoints = 1000;
-    private static int save_freq =1; // частота сохранения результата
-    private static int tpoints = 40000;
+    private static final int save_freq =1; // частота сохранения результата
+    private static double tpoints = 40000.0;
     private static double dt = 0.001;
-    private static double Rleft = 1.0;
-    private static double tmax=3700;
-    private static double Rright=1;
-    private static double whole_lenght=2;
+    private static double R_left = 1.0;
+    private static double tmax=4700.0;
+    private static double R_right=1.0;
+    private static double whole_lenght=2.0;
     private static double dx = whole_lenght / (xpoints-1);
-   // private static double dx = dt;
-    //private static double dx = 0.001;
+
     // число точек на процесс
-    private static int local_n = xpoints/maxGlobalWorkSize;
+    private static double local_n = xpoints/maxGlobalWorkSize;
     
 
     private static cl_program program;
@@ -73,7 +72,7 @@ public class HostPart {
           U_minus[i]=(Math.random()*1e-12);
         });
        
-        try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/temporary.csv", false))
+        try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/temp.csv", false))
         {
             for (int i = 0; i < U_plus.length; i++)
             {
@@ -149,7 +148,7 @@ public class HostPart {
 //            System.out.println(e.getMessage());
 //         }
 
-             try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_minus.csv", false))
+             try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_minus.csv", false))
         {
              for (int i=U_minus.length-1; i>=0; i--)
             {
@@ -165,7 +164,7 @@ public class HostPart {
          }
              
              
-           try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
+           try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_plus.csv", false))
         {
             for (int i = 0; i < U_plus.length; i++)
             {
@@ -268,15 +267,15 @@ public class HostPart {
       
         String programSource;
        programSource = 
-               readFile("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/java/kernels/LaserDynamics.cl")
+               readFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/LaserDynamics.cl")
                        .replace("{{xpoints}}", String.format("%d",xpoints) )
                        .replace("{{save_freq}}", String.format("%d", save_freq) )
                        .replace("{{maxGlobalWorkSize}}", String.format("%d", maxGlobalWorkSize) )
-                       .replace("{{Rleft}}", String.format("%f",Rleft) )
-                       .replace("{{Rright}}", String.format("%f",Rright) )
+                       .replace("{{R_left}}", String.format("%f",R_left) )
+                       .replace("{{R_right}}", String.format("%f",R_right) )
                        .replace("{{dt}}", String.format("%f",dt) )
                        .replace("{{dx}}", String.format("%f",dx) )
-                       .replace("{{local_n}}", String.format("%d",local_n) )
+                       .replace("{{local_n}}", String.format("%f",local_n) )
                ;
             
            // equals 
