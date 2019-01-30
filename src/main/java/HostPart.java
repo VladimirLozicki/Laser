@@ -10,11 +10,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.stream.IntStream;
 import java.util.stream.*;
 import java.util.Random;
-import java.lang.Math;
+import java.lang.*;
 import java.io.*;
+
 
 
 import static org.jocl.CL.*;
@@ -29,9 +31,9 @@ public class HostPart {
     private static final int save_freq =1; // частота сохранения результата
     private static double tpoints = 40000.0;
     private static double dt = 0.001;
-    private static double R_left = 1.0;
+    private static double Rleft = 1.0;
     private static double tmax=4700.0;
-    private static double R_right=1.0;
+    private static double Rright=1.0;
     private static double whole_lenght=2.0;
     private static double dx = whole_lenght / (xpoints-1);
 
@@ -43,7 +45,7 @@ public class HostPart {
     private static cl_kernel kernel;
     private static cl_context context;
     private static cl_command_queue commandQueue;
-    private static cl_mem memObjects[] = new cl_mem[2];
+    private static cl_mem memObjects[] = new cl_mem[3];
 
     
     /**
@@ -55,9 +57,13 @@ public class HostPart {
     public static void main(String args[]) {
         // Create input- and output data
         double[] U_plus = new double[xpoints];
+
+
         //массив произедения элементов
+
+
         double[] U_minus=new double[xpoints];
-        
+        double[] D = new double[xpoints];
         // создать два буффера и использовать их как начальные и конечные значения
          
          // round целочисленное округление
@@ -68,8 +74,8 @@ public class HostPart {
           //double S_RATE=1;
           IntStream.range(0, xpoints).forEach((i) -> {
           U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-12));
-          // U_plus[i]+=(int)(amplitude * Math.sin((float)(2*Math.PI*i*freq_Hz/S_RATE))+(Math.random()*1e-6));
           U_minus[i]=(Math.random()*1e-12);
+          D[i]=Math.random()*1e-5;
         });
        
         try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/temp.csv", false))
@@ -98,8 +104,8 @@ public class HostPart {
         //tmp лева] волна
         Pointer u_plus = Pointer.to(U_plus);
         Pointer u_minus = Pointer.to(U_minus);
-        
-        initialize(u_plus, u_minus);
+        Pointer d = Pointer.to(D);
+        initialize(u_plus, u_minus, d);
        // initialize(right, left);
 
         // Set the arguments for the kernel
@@ -109,6 +115,7 @@ public class HostPart {
         //Задаем аргументы ядра
         clSetKernelArg(kernel, 0, Sizeof.cl_mem, Pointer.to(memObjects[0]));
         clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(memObjects[1]));
+        clSetKernelArg(kernel, 2, Sizeof.cl_mem, Pointer.to(memObjects[2]));
 
         // Set the work-item dimensions
         long global_work_size[] = new long[]{maxGlobalWorkSize};
@@ -130,7 +137,7 @@ public class HostPart {
         
         clEnqueueReadBuffer(commandQueue, memObjects[0], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_plus, 0, null, null);
         clEnqueueReadBuffer(commandQueue, memObjects[1], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_minus, 0, null, null);
-      // clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, xpoints * Sizeof.cl_double, right, 0, null, null);
+        clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, xpoints * Sizeof.cl_double, d, 0, null, null);
        // clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, xpoints * Sizeof.cl_double, left, 0, null, null);
            // запись в файл правой волны
 //         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
@@ -177,7 +184,20 @@ public class HostPart {
         catch(IOException e) {
             System.out.println(e.getMessage());
         }
-             
+
+       try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/D.csv", false))
+       {
+           for (int i = 0; i < D.length; i++)
+           {
+               final String s = Double.toString(D[i]);
+               writer.write(s);
+               writer.write(System.lineSeparator());
+           }
+       }
+       catch(IOException e) {
+           System.out.println(e.getMessage());
+       }
+
    }
        /*
          //проверяем волну после одного шага по времени
@@ -192,9 +212,7 @@ public class HostPart {
          System.out.println("волна начальная: " + initialWave);
          System.out.println("волна с шагом dt: " + oneStep);
          System.out.println("разность : " + difference);
-         
-         
-         
+
          
         //output the results to the console
         
@@ -214,7 +232,7 @@ public class HostPart {
     
     //инициализация основных частей программы
     //////
-    private static void initialize(final Pointer pointerA, final Pointer pointerB) {
+    private static void initialize(final Pointer pointerA, final Pointer pointerB, final Pointer pointerD) {
         // The platform, device type and device number that will be used
         	
         final int platformIndex = 0;
@@ -261,23 +279,19 @@ public class HostPart {
         // создаем буфер
         memObjects[0] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerA, null);
         memObjects[1] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerB, null);
-        //memObjects[0] = clCreateBuffer(context, CL_MEM_READ_WRITE, Sizeof.cl_double * xpoints, null, null); 
-        //memObjects[1] = clCreateBuffer(context, CL_MEM_READ_WRITE, Sizeof.cl_double * xpoints, null, null); 
-     // }    
-      
-        String programSource;
-       programSource = 
+        memObjects[2] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerD, null);
+        String programSource =
                readFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/LaserDynamics.cl")
-                       .replace("{{xpoints}}", String.format("%d",xpoints) )
-                       .replace("{{save_freq}}", String.format("%d", save_freq) )
-                       .replace("{{maxGlobalWorkSize}}", String.format("%d", maxGlobalWorkSize) )
-                       .replace("{{R_left}}", String.format("%f",R_left) )
-                       .replace("{{R_right}}", String.format("%f",R_right) )
-                       .replace("{{dt}}", String.format("%f",dt) )
-                       .replace("{{dx}}", String.format("%f",dx) )
-                       .replace("{{local_n}}", String.format("%f",local_n) )
+                       .replace( "{{xpoints}}", String.format(Locale.US,"%d",xpoints) )
+                       .replace("{{save_freq}}", String.format(Locale.US,"%d", save_freq) )
+                       .replace("{{maxGlobalWorkSize}}", String.format(Locale.US,"%d", maxGlobalWorkSize) )
+                       .replace("{{R_left}}", String.format(Locale.US,"%f",Rleft) )
+                       .replace("{{R_right}}", String.format(Locale.US,"%f",Rright) )
+                       .replace("{{dt}}", String.format(Locale.US,"%f",dt) )
+                       .replace("{{dx}}", String.format(Locale.US,"%f",dx) )
+                       .replace("{{local_n}}", String.format(Locale.US,"%f",local_n) )
                ;
-            
+
            // equals 
            // метод equals сравнение строк
        // String programSource;
@@ -295,7 +309,9 @@ public class HostPart {
             programSource = readFile(Constants.clFileName).replace("{{lalala}}", String.format("%d",lalala) ); 
         }*/
 
-        
+
+
+
         program = clCreateProgramWithSource(context, 1, new String[]{programSource}, null, null);
 
         // Build the program
