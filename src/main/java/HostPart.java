@@ -17,26 +17,27 @@ import java.util.Random;
 import java.lang.*;
 import java.io.*;
 
-
-
 import static org.jocl.CL.*;
 
+/**
+ *
+ */
 public class HostPart {
 
     private static final Logger logger = LogManager.getLogger();
     
     // размер коммуникатора
-    private static final int maxGlobalWorkSize =2;
+    private static final int maxGlobalWorkSize = 10;
     private static final int xpoints = 1000;
     private static final int save_freq =1; // частота сохранения результата
-    private static double tpoints = 40000.0;
+    private static double tpoints = 100000.0;
     private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static double tmax=4700.0;
+    private static double tmax=4500.0;
     private static double Rright=1.0;
     private static double whole_lenght=2.0;
     private static double dx = whole_lenght / (xpoints-1);
-
+   // private static double dx = 0.0001;
     // число точек на процесс
     private static double local_n = xpoints/maxGlobalWorkSize;
     
@@ -46,8 +47,6 @@ public class HostPart {
     private static cl_context context;
     private static cl_command_queue commandQueue;
     private static cl_mem memObjects[] = new cl_mem[3];
-
-    
     /**
      * Main part of the Host Part.
      *
@@ -57,40 +56,20 @@ public class HostPart {
     public static void main(String args[]) {
         // Create input- and output data
         double[] U_plus = new double[xpoints];
-
-
-        //массив произедения элементов
-
-
         double[] U_minus=new double[xpoints];
         double[] D = new double[xpoints];
+
         // создать два буффера и использовать их как начальные и конечные значения
          
-         // round целочисленное округление
-         //int T=(int)Math.round(tmax/dt);
-         // пустить ступеньку как полуширина гауса  высота 1 
-          //double amplitude = 30000; //берём максимальную возможную амплитуду
-	  //double freq_Hz = 50; 
-          //double S_RATE=1;
+
           IntStream.range(0, xpoints).forEach((i) -> {
-          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-12));
-          U_minus[i]=(Math.random()*1e-12);
+          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-10));
+          U_minus[i]=(Math.random()*1e-10);
           D[i]=Math.random()*1e-5;
         });
-       
-        try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/temp.csv", false))
-        {
-            for (int i = 0; i < U_plus.length; i++)
-            {
-                final String s = Double.toString(U_plus[i]);
-                writer.write(s);
-                writer.write(System.lineSeparator());
-            }
-        }
-        catch(IOException e) {
-            System.out.println(e.getMessage());
-        }
-        
+
+        WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/temp.csv", U_plus);
+
         double initialWave=0;
         for (int p=0; p<xpoints;p++)
         { 
@@ -98,18 +77,13 @@ public class HostPart {
            
             
         }
-       // Pointer srcA = Pointer.to(temporaryRight);
-      //  Pointer srcB = Pointer.to(temporaryLeft);
-        // right правая волна
-        //tmp лева] волна
+
+
         Pointer u_plus = Pointer.to(U_plus);
         Pointer u_minus = Pointer.to(U_minus);
         Pointer d = Pointer.to(D);
         initialize(u_plus, u_minus, d);
-       // initialize(right, left);
 
-        // Set the arguments for the kernel
-        // добавить новый элемент(счетчик элементов массива)
         
         
         //Задаем аргументы ядра
@@ -138,66 +112,12 @@ public class HostPart {
         clEnqueueReadBuffer(commandQueue, memObjects[0], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_plus, 0, null, null);
         clEnqueueReadBuffer(commandQueue, memObjects[1], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_minus, 0, null, null);
         clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, xpoints * Sizeof.cl_double, d, 0, null, null);
-       // clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, xpoints * Sizeof.cl_double, left, 0, null, null);
-           // запись в файл правой волны
-//         try (final FileWriter writer = new FileWriter("/Users/vladimir/Desktop/LaserDynamicsModelling/src/main/U_plus.csv", false))
-//        {
-//             for (int i =0; i < U_plus.length; i++)
-//            {
-//                final String s = Double.toString(U_plus[i]);
-//                writer.write(s);
-//                writer.write(System.lineSeparator());
-//                //U_plus[i]=U_plus[i]+(Math.random()*1e-12);
-//            }
-//          // System.out.println("u_plus.lenght" + u_plus.length);
-//        }
-//        catch(IOException e) {
-//            System.out.println(e.getMessage());
-//         }
 
-             try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_minus.csv", false))
-        {
-             for (int i=U_minus.length-1; i>=0; i--)
-            {
-                final String s = Double.toString(U_minus[i]);
-                writer.write(s);
-                writer.write(System.lineSeparator());
-                //U_plus[i]=U_plus[i]+(Math.random()*1e-12);
-            }
-          // System.out.println("u_plus.lenght" + u_plus.length);
-        }
-        catch(IOException e) {
-            System.out.println(e.getMessage());
-         }
+
              
-             
-           try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_plus.csv", false))
-        {
-            for (int i = 0; i < U_plus.length; i++)
-            {
-                final String s = Double.toString(U_plus[i]);
-                writer.write(s);
-                writer.write(System.lineSeparator());
-               // U_minus[i]=U_minus[i]+(Math.random()*1e-12);
-            }
-        }
-        catch(IOException e) {
-            System.out.println(e.getMessage());
-        }
-
-       try (final FileWriter writer = new FileWriter("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/D.csv", false))
-       {
-           for (int i = 0; i < D.length; i++)
-           {
-               final String s = Double.toString(D[i]);
-               writer.write(s);
-               writer.write(System.lineSeparator());
-           }
-       }
-       catch(IOException e) {
-           System.out.println(e.getMessage());
-       }
-
+             WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_minus.csv", U_minus);
+               WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_plus.csv", U_plus);
+           //  WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/D.csv", D);
    }
        /*
          //проверяем волну после одного шага по времени
@@ -231,7 +151,13 @@ public class HostPart {
      */
     
     //инициализация основных частей программы
-    //////
+
+    /**
+     *
+     * @param pointerA
+     * @param pointerB
+     * @param pointerD
+     */
     private static void initialize(final Pointer pointerA, final Pointer pointerB, final Pointer pointerD) {
         // The platform, device type and device number that will be used
         	
@@ -292,26 +218,6 @@ public class HostPart {
                        .replace("{{local_n}}", String.format(Locale.US,"%f",local_n) )
                ;
 
-           // equals 
-           // метод equals сравнение строк
-       // String programSource;
-        /*if (Constants.kernelCreator.equals(Constants.KernelCreator.CODE.name())) {
-            
-           // Create kernel file from the source code
-           // создаем файл ядра из исходного кода
-            
-           Resonator resonator = new ResonatorBuilder().buildResonator();
-            programSource = new KernelBuilder(resonator).buildKernel();
-        } else {
-           // Create the program from the existing kernel file
-            //  Создает программу из существующего файла ядра
-            int lalala=400;
-            programSource = readFile(Constants.clFileName).replace("{{lalala}}", String.format("%d",lalala) ); 
-        }*/
-
-
-
-
         program = clCreateProgramWithSource(context, 1, new String[]{programSource}, null, null);
 
         // Build the program
@@ -362,6 +268,26 @@ public class HostPart {
         } catch (IOException e) {
             logger.fatal(String.format("Can't convert %s file to string : ", fileName) + e);
             return "";
+        }
+    }
+
+    /**
+     *
+     * @param filename
+     * @param s
+     */
+    private static void  WritetoFile(String filename, double[] s ){
+        try (final FileWriter writer = new FileWriter(filename, false))
+        {
+            for (int i = 0; i <s.length; i++)
+            {
+                final String l = Double.toString(s[i]);
+                writer.write(l);
+                writer.write(System.lineSeparator());
+            }
+        }
+        catch(IOException e) {
+            System.out.println(e.getMessage());
         }
     }
     /**

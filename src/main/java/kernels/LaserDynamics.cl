@@ -13,7 +13,6 @@ static double x_max(double x, double R_max)
 	return x * R_max;
 }
 
-
 __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,__global double * D)
 {
 	  int pid = get_global_id(0);
@@ -24,8 +23,6 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
       const int local_N={{local_n}};
       int save={{save_freq}};
       const int size={{maxGlobalWorkSize}};
-
-
 
          // для правильного разбора массивов
          int start = (pid == 0) ? 1 : 0;
@@ -42,6 +39,7 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
 
           	// общая память
           	// начальный слой
+
           	__local double u_left_plus[size]; // не size - 1, т. к. нужны ещё точки для граничных условий
           	__local double u_right_plus[size];
           	__local double u_left_minus[size];
@@ -54,6 +52,7 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
           		u_minus[i] = U_minus[pid * local_N + i - start];
 
           	}
+
 
           	// вычисления
 
@@ -80,7 +79,8 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
          	 		u_minus[local_N] = x_0(u_left_plus[0], R_0);
          	 	}
 
-         	 	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+
+
 
          	 	// половинный слой
          		for(int i = 0; i < local_N + 1; i++)
@@ -109,6 +109,7 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
 
          	 		u_half_plus[i] = cl_dt / cl_dx * (1 - cl_dt) * (u_np1_plus - u_n_plus);
          	 		u_half_minus[i] = cl_dt / cl_dx * (1 - cl_dt) * (u_np1_minus - u_n_minus);
+
 
          			// разности для полного слоя
          			u_tmp_plus[i] = u_np1_plus - u_n_plus;
@@ -140,16 +141,16 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus,_
          				u_np1_minus = u_minus[i + 1];
          			}
 
-         			u_plus[i] -= cl_dt / cl_dx * u_tmp_plus[i - start]
-         							- ((u_tmp_plus[i - start] / (u_np1_plus - u_plus[i] * 0.999999999)
+         			u_plus[i] -= cl_dt / cl_dx * u_tmp_plus[i - start]- ((u_tmp_plus[i - start] / (u_np1_plus - u_plus[i] * 0.99999999)
          							* u_half_plus[i + 1 - start]) - u_half_plus[i - start]);
-
-
          			u_minus[i] -= cl_dt / cl_dx * u_tmp_minus[i - start]
-         							- ((u_tmp_minus[i - start] / (u_np1_minus - u_minus[i] * 0.999999999)
+         						- ((u_tmp_minus[i - start] / (u_np1_minus - u_minus[i] * 0.99999999)
          							* u_half_minus[i + 1 - start]) - u_half_minus[i - start]);
+
          		}
+
          	}
+
 
          	for (int i = start; i < finish; i++)
          	{
