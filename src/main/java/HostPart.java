@@ -30,10 +30,9 @@ public class HostPart {
     private static final int maxGlobalWorkSize = 10;
     private static final int xpoints = 1000;
     private static final int save_freq =1; // частота сохранения результата
-    private static double tpoints = 100000.0;
     private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static double tmax=4500.0;
+    private static int tmax=2;
     private static double Rright=1.0;
     private static double whole_lenght=2.0;
     private static double dx = whole_lenght / (xpoints-1);
@@ -63,8 +62,8 @@ public class HostPart {
          
 
           IntStream.range(0, xpoints).forEach((i) -> {
-          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-10));
-          U_minus[i]=(Math.random()*1e-10);
+          U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-8));
+          U_minus[i]=(Math.random()*1e-8);
           D[i]=Math.random()*1e-5;
         });
 
