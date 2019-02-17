@@ -31,20 +31,17 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
          int start = (pid == 0) ? 1 : 0;
          int finish = local_N + start;
          // вычисления будут проводиться в приватной (быстрой) памяти
-          	__private double u_plus[500 + 1]; // на всех +1 для приватных точек; для унификации
-          	__private double u_minus[500 + 1];
-          	__private double u_tmp_plus[500 + 1];
-          	__private double u_tmp_minus[500 + 1];
-          	__private double u_half_plus[500 + 1];
-          	__private double u_half_minus[500 + 1];
+          	__private double u_plus[local_N + 1]; // на всех +1 для приватных точек; для унификации
+          	__private double u_minus[local_N  + 1];
+          	__private double u_tmp_plus[local_N + 1];
+          	__private double u_tmp_minus[local_N + 1];
+          	__private double u_half_plus[local_N  + 1];
+          	__private double u_half_minus[local_N  + 1];
 
           	// общая память
           	// начальный слой
-          	__local double u_left_plus[2]; // не size - 1, т. к. нужны ещё точки для граничных условий
-          	__local double u_left_minus[2];
-          	//__local double u_right_plus[2];
-          	//__local double u_right_minus[2];
-
+          	__local double u_left_plus[size]; // не size - 1, т. к. нужны ещё точки для граничных условий
+          	__local double u_left_minus[size];
 
           	// worker'ы разбирают массивы
           	for (int i = start; i < finish; i++)
@@ -65,8 +62,6 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
 
 
          		U_right_plus[pid] = u_plus[local_N - 1 + start];
-
-         	 	//U_right_minus[pid] = u_minus[local_N - 1 + start];
          	 	U_right_minus[pid] = u_minus[local_N - 1 + start];
 
          		// виртуальные точки и граничные условия
@@ -149,10 +144,6 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
          			u_minus[i] -= cl_dt / cl_dx * u_tmp_minus[i - start]
          							- ((u_tmp_minus[i - start] / (u_np1_minus - u_minus[i] * 0.999999999)
          							* u_half_minus[i + 1 - start]) - u_half_minus[i - start]);
-
-         			//u_plus[i] -=  cl_dt / cl_dx * u_tmp_plus[i - start]-((u_tmp_plus[i - start] / (u_np1_plus - u_plus[i] * 0.999999999)* u_half_plus[i + 1 - start]) - u_half_plus[i - start]);
-
-         			//u_minus[i] -= cl_dt / cl_dx * u_tmp_minus[i - start]-((u_tmp_minus[i - start] / (u_np1_minus - u_minus[i] * 0.999999999)* u_half_minus[i + 1 - start]) - u_half_minus[i - start]);
          		}
          	}
          	for (int i = start; i < finish; i++)
