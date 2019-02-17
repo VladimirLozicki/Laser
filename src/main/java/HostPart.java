@@ -236,7 +236,7 @@ public class HostPart {
         // The platform, device type and device number that will be used
         	
         final int platformIndex = 0;
-        final long deviceType = CL_DEVICE_TYPE_CPU;
+        final long deviceType = CL_DEVICE_TYPE_ALL;
         final int deviceIndex = 0;
 
         // Enable exceptions and subsequently omit error checks in this sample
