@@ -14,7 +14,7 @@ static double x_max(double x, double R_max)
 }
 
 
-__kernel void laserDynamics(__global double * U_plus,__global double * U_minus, __global double * U_right_plus,  __global double * U_right_minus)
+__kernel void laserDynamics(__global double * U_plus,__global double * U_minus, __global double * U_right_plus,  __global double * U_right_minus, __global double * D)
 {
 	  int pid = get_global_id(0);
       double R_max = {{R_right}};
@@ -26,13 +26,13 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
       const int size={{maxGlobalWorkSize}};
 
 
-
          // для правильного разбора массивов
          int start = (pid == 0) ? 1 : 0;
          int finish = local_N + start;
          // вычисления будут проводиться в приватной (быстрой) памяти
           	__private double u_plus[local_N + 1]; // на всех +1 для приватных точек; для унификации
           	__private double u_minus[local_N  + 1];
+          	__private double d[local_N+1];
           	__private double u_tmp_plus[local_N + 1];
           	__private double u_tmp_minus[local_N + 1];
           	__private double u_half_plus[local_N  + 1];
@@ -76,7 +76,7 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
          	 		u_minus[local_N] = x_0(u_left_plus[0], R_0);
          	 	}
          	 	barrier(CLK_LOCAL_MEM_FENCE);
-         	 	barrier(CLK_LOCAL_MEM_FENCE);
+         	 	//barrier(CLK_LOCAL_MEM_FENCE);
 
 
          	 	// половинный слой
@@ -150,6 +150,7 @@ __kernel void laserDynamics(__global double * U_plus,__global double * U_minus, 
          	{
          		U_plus[pid * local_N + i - start] = u_plus[i];
          		U_minus[pid * local_N + i - start] = u_minus[i];
+         		D[i]=i;
          	}
 
 

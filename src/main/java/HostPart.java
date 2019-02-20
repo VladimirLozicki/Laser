@@ -31,7 +31,7 @@ public class HostPart {
     //private static int tpoints = 100000;
     private static double dt = 0.001;
     private static double Rleft = 1.0;
-    private static int tmax=600;
+    private static int tmax=1900;
     private static double Rright=1.0;
     private static double whole_lenght=1.0;
     private static double dx = whole_lenght / (xpoints - 1);
@@ -43,7 +43,7 @@ public class HostPart {
     private static cl_kernel kernel;
     private static cl_context context;
     private static cl_command_queue commandQueue;
-    private static cl_mem memObjects[] = new cl_mem[4];
+    private static cl_mem memObjects[] = new cl_mem[5];
 
     /**
      * Main part of the Host Part.
@@ -55,20 +55,20 @@ public class HostPart {
         // Create input- and output data
 
         double[] U_plus = new double[xpoints];
-        //массив произедения элементов
         double[] U_minus=new double[xpoints];
         double[] U_right_plus=new double[maxGlobalWorkSize];
         double[] U_right_minus=new double[maxGlobalWorkSize];
+        double[] D = new double[xpoints];
 
           IntStream.range(0, xpoints).forEach((i) -> {
           U_plus[i]=1/(0.1*Math.sqrt(2*Math.PI)*Math.exp((i*dx-0.5)*(i*dx-0.5)/(2*0.01))+(Math.random()*1e-10));
           U_minus[i]=(Math.random()*1e-10);
+          D[i]=0.0001;
 
         });
+
         IntStream.range(0, maxGlobalWorkSize).forEach((i) -> {
             U_right_plus[i]=0;
-        });
-        IntStream.range(0, maxGlobalWorkSize).forEach((i) -> {
             U_right_minus[i]=0;
         });
 
@@ -78,15 +78,14 @@ public class HostPart {
         for (int p=0; p<xpoints;p++)
         { 
             initialWave=initialWave+U_plus[p];
-           
-            
         }
         Pointer u_plus = Pointer.to(U_plus);
         Pointer u_minus = Pointer.to(U_minus);
         Pointer u_right_plus = Pointer.to(U_right_plus);
         Pointer u_right_minus = Pointer.to(U_right_minus);
+        Pointer d= Pointer.to(D);
         
-        initialize(u_plus, u_minus, u_right_plus,u_right_minus);
+        initialize(u_plus, u_minus, u_right_plus,u_right_minus, d);
 
 
         // Set the arguments for the kernel
@@ -98,6 +97,7 @@ public class HostPart {
         clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(memObjects[1]));
         clSetKernelArg(kernel, 2, Sizeof.cl_mem, Pointer.to(memObjects[2]));
         clSetKernelArg(kernel, 3, Sizeof.cl_mem, Pointer.to(memObjects[3]));
+        clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(memObjects[4]));
 
         // Set the work-item dimensions
         long global_work_size[] = new long[]{maxGlobalWorkSize};
@@ -117,15 +117,14 @@ public class HostPart {
         // Read the output data
         // чтение из буфер
         
-        clEnqueueReadBuffer(commandQueue, memObjects[0], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_plus, 0, null, null);
-        clEnqueueReadBuffer(commandQueue, memObjects[1], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_minus, 0, null, null);
-        clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, maxGlobalWorkSize * Sizeof.cl_double, u_right_plus, 0, null, null);
-        clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, maxGlobalWorkSize * Sizeof.cl_double, u_right_minus, 0, null, null);
-           // запись в файл правой волны
+       clEnqueueReadBuffer(commandQueue, memObjects[0], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_plus, 0, null, null);
+       clEnqueueReadBuffer(commandQueue, memObjects[1], CL_TRUE, 0, xpoints * Sizeof.cl_double, u_minus, 0, null, null);
+       clEnqueueReadBuffer(commandQueue, memObjects[2], CL_TRUE, 0, maxGlobalWorkSize * Sizeof.cl_double, u_right_plus, 0, null, null);
+       clEnqueueReadBuffer(commandQueue, memObjects[3], CL_TRUE, 0, maxGlobalWorkSize * Sizeof.cl_double, u_right_minus, 0, null, null);
+       clEnqueueReadBuffer(commandQueue, memObjects[4], CL_TRUE, 0, maxGlobalWorkSize * Sizeof.cl_double, d, 0, null, null);
        WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_plus.csv", U_plus);
-
        WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/U_minus.csv", U_minus);
-             
+       WritetoFile("/Users/vladimirlozickiy/Desktop/Laser/src/main/java/kernels/D.csv", D);
    }
        /*
          //проверяем волну после одного шага по времени
@@ -140,14 +139,11 @@ public class HostPart {
          System.out.println("волна начальная: " + initialWave);
          System.out.println("волна с шагом dt: " + oneStep);
          System.out.println("разность : " + difference);
-         
-         
-         
-         
+
         //output the results to the console
         
        // IntStream.range(0, U_plus.length).mapToDouble(i -> U_plus[i]).forEach(System.out::println);
-        //IntStream.range(0, u_minus.length).mapToDouble(i -> u_minus[i]).forEach(System.out::println);
+       // IntStream.range(0, u_minus.length).mapToDouble(i -> u_minus[i]).forEach(System.out::println);
        
       
          shutdown();
@@ -162,7 +158,7 @@ public class HostPart {
     
     //инициализация основных частей программы
     //////
-    private static void initialize(final Pointer pointerA, final Pointer pointerB, Pointer pointerC, Pointer pointerD) {
+    private static void initialize(final Pointer pointerA, final Pointer pointerB, Pointer pointerC, Pointer pointerD, Pointer pointerE) {
         // The platform, device type and device number that will be used
         	
         final int platformIndex = 0;
@@ -211,10 +207,9 @@ public class HostPart {
         memObjects[1] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerB, null);
         memObjects[2] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerC, null);
         memObjects[3] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerD, null);
+        memObjects[4] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_double * xpoints, pointerE, null);
 
-        //memObjects[0] = clCreateBuffer(context, CL_MEM_READ_WRITE, Sizeof.cl_double * xpoints, null, null); 
-        //memObjects[1] = clCreateBuffer(context, CL_MEM_READ_WRITE, Sizeof.cl_double * xpoints, null, null); 
-     // }    
+
       
         String programSource;
        programSource = 
@@ -231,8 +226,6 @@ public class HostPart {
         program = clCreateProgramWithSource(context, 1, new String[]{programSource}, null, null);
 
         // Build the program
-        
-        
         try 
         {
              clBuildProgram(program, 0, null, null, null, null);
@@ -244,6 +237,7 @@ public class HostPart {
          }
        
         // Create the kernel
+
         kernel = clCreateKernel(program, Constants.kernelName, null);
     }
 
@@ -262,7 +256,6 @@ public class HostPart {
      * @param fileName The name of the file to read.
      * @return The contents of the file.
      */
-    
     private static String readFile(final String fileName) {
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             StringBuilder sb = new StringBuilder();
@@ -285,7 +278,7 @@ public class HostPart {
      * @param filename
      * @param s
      */
-    private static void  WritetoFile(String filename, double[] s ){
+    private static void WritetoFile(String filename, double[] s ){
         try (final FileWriter writer = new FileWriter(filename, false))
         {
             for (int i = 0; i <s.length; i++)
@@ -299,9 +292,11 @@ public class HostPart {
             System.out.println(e.getMessage());
         }
     }
+
     /**
      * Release created kernel, program, command queue and context.
      */
+
     private static void shutdown() {
         // Release kernel, program, and memory objects
         releaseObjects(memObjects);
